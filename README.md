@@ -1,5 +1,9 @@
 # mysqlc - the modern MySQL client
 
+We all love Mysql/Mariadb, but one thing whihc I don't like is its barebones command line client. There are commercial options available which are significantly more powerful, but some things should just be free for all. This tiny project addresses a few of these gaps which I personally dislike.
+
+Hope its helpful for others as well.
+
 ## Features
 * Allow multi-line SQL query creation/editing
 * Maintains/saves execution history
@@ -20,5 +24,18 @@
     * DB_DATABASE='default_database' 
   * Optional
   * GEMINI_API_KEY='api_key'
+* Or pass the variables as command line options
+  <pre>
+  options:
+  -h, --help            show this help message and exit
+  -u USER, --user USER  MySQL username
+  -p PASSWORD, --password PASSWORD
+                        MySQL password
+  -H HOST, --host HOST  MySQL host
+  -d DATABASE, --database DATABASE
+                        Default database
+  -g GEMINI_API_KEY, --gemini_api_key GEMINI_API_KEY
+                        Gemini API key
+  </pre>
 * Add the location of this directory to your PATH variable
 * Finally, execute: **mysqlc** 

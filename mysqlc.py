@@ -5,6 +5,11 @@ import time
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
+from prompt_toolkit.shortcuts.prompt import PromptSession
+from prompt_toolkit.keys import Keys
+import argparse
+
+version = 0.10
 
 # Database connection details from environment variables
 db_config = {
@@ -13,6 +18,8 @@ db_config = {
     'host': os.getenv('DB_HOST'),
     'database': os.getenv('DB_DATABASE')
 }
+
+gemini_api_key = os.environ["GEMINI_API_KEY"]
 
 # History file path
 history_file = os.path.expanduser('~/.mysqlc.history')
@@ -33,8 +40,10 @@ session = PromptSession(
 def askGemini(query="",model_name="gemini-2.0-flash-exp"):
     import os
     import google.generativeai as genai
+    
+    global gemini_api_key
 
-    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+    genai.configure(api_key=gemini_api_key)
 
     # Create the model
     generation_config = {
@@ -166,8 +175,43 @@ def load_history(history_file):
                 history.append(current_command.strip())
     return history
 
-def main():
+def infobanner():
+    print(f"""
+------------------------------------------------          
+mysql: A modern MySQL client
+- Version: {version}
+- Source: https://github.com/royans/mysqlc
+
+Note: Press "ALT+Enter" when to execute command.
+------------------------------------------------          
+""")
+
+def launch():
     schema = None
+    
+    # Set up command-line arguments
+    parser = argparse.ArgumentParser(description='A modern MySQL client')
+    parser.add_argument('-u', '--user', help='MySQL username')
+    parser.add_argument('-p', '--password', help='MySQL password')
+    parser.add_argument('-H', '--host', help='MySQL host')
+    parser.add_argument('-d', '--database', help='Default database')
+    parser.add_argument('-g', '--gemini_api_key', help='Gemini API key')
+    args = parser.parse_args()
+
+    # Override environment variables with command-line arguments
+    if args.user:
+        db_config['user'] = args.user
+    if args.password:
+        db_config['password'] = args.password
+    if args.host:
+        db_config['host'] = args.host
+    if args.database:
+        db_config['database'] = args.database
+    if args.gemini_api_key:
+        global gemini_api_key
+        gemini_api_key = args.gemini_api_key
+        
+            
     try:
         conn = mysql.connector.connect(**db_config)
         cur = conn.cursor(dictionary=True)  # Use dictionary cursor for easier access
@@ -175,7 +219,8 @@ def main():
 
         history = load_history(history_file)  # Load history
         sql_accumulator = ""
-        
+
+        infobanner()        
         
         while True:
             # Get the current database name
@@ -189,7 +234,12 @@ def main():
             # Update the prompt
             prompt = f"Mysql [{current_db}] SQL> " if current_db else "Mysql SQL> "
 
-            line = session.prompt(prompt)
+            try:
+                line = session.prompt(prompt)
+            except (KeyboardInterrupt, EOFError):  # Catch Ctrl+C and Ctrl+D
+                print("\nExiting...")
+                break
+            
             if not line:
                 continue
 
@@ -244,6 +294,9 @@ def main():
     finally:
         if conn and conn.is_connected():
             conn.close()
+
+def main():
+    launch()
 
 if __name__ == '__main__':
     main()
