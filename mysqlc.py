@@ -21,8 +21,8 @@ db_config = {
     'database': os.getenv('DB_DATABASE')
 }
 
-validSqlCommands = ("SELECT", "SHOW", "DESC","UPDATE", "INSERT", "DELETE", "CREATE", "ALTER", "DROP")
-validGenAISqlCommands = ("SELECT", "SHOW", "DESC")
+validSqlCommands = ("SELECT", "USE", "SHOW", "DESC","UPDATE", "INSERT", "DELETE", "CREATE", "ALTER", "DROP")
+validGenAISqlCommands = ("SELECT", "USE", "SHOW", "DESC")
 
 gemini_api_key = os.environ["GEMINI_API_KEY"]
 
