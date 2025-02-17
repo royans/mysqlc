@@ -178,7 +178,7 @@ def load_history(history_file):
 def infobanner():
     print(f"""
 ------------------------------------------------          
-mysql: A modern MySQL client
+mysqlc: A modern MySQL client
 - Version: {version}
 - Source: https://github.com/royans/mysqlc
 
