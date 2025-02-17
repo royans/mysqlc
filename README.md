@@ -1,4 +1,4 @@
-# mysqlc - the modern MySQL client
+# mysqlc - Modern MySQL client with a little GenAI magic (using gemini)
 
 We all love Mysql/Mariadb, but one thing which we all could benifit from is having a few more features in its barebones command line client. There are commercial options available which are significantly more powerful, but some things should just be free for all. This tiny project addresses a few of these gaps which I personally dislike. 
 

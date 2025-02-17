@@ -11,7 +11,7 @@ from prompt_toolkit.lexers import PygmentsLexer
 from pygments.lexers.sql import MySqlLexer
 import argparse
 
-version = 0.11
+version = 0.12
 
 # Database connection details from environment variables
 db_config = {
@@ -32,14 +32,40 @@ bindings = KeyBindings()
 def _(event: KeyPressEvent):
     "Allow tabs to be inserted as input."
     event.app.current_buffer.insert_text("  ")
-
+       
 session = PromptSession(
     history=FileHistory(history_file),
     multiline=True,
     key_bindings=bindings
 )
 
-def askGemini(query="",model_name="gemini-2.0-flash-exp"):
+def get_top_flash_model():
+    """
+    Retrieves a sorted list of available Gemini models that contain "flash" in their name,
+    with "models/" removed from the strings.  The list is sorted with the latest models
+    appearing first.
+
+    Returns:
+        list: A sorted list of matching model names.
+    """
+    import google.generativeai as genai
+    global gemini_api_key
+
+    genai.configure(api_key=gemini_api_key)
+
+    try:
+        genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+        models = genai.list_models()
+        filtered_models = [model.name.replace("models/", "") for model in models if "flash" in model.name and not "preview" in model.name and not "thinking" in model.name]
+
+        # Sort by name in reverse alphabetical order to put "flash-latest" or similar at the top.
+        filtered_models.sort(reverse=True)
+    except Exception as e:
+        return
+    print(f"Using Gemini model: {filtered_models[0]}")
+    return filtered_models[0]
+
+def askGemini(query="",default_model_name="gemini-2.0-flash"):
     import os
     import google.generativeai as genai
     
@@ -57,7 +83,7 @@ def askGemini(query="",model_name="gemini-2.0-flash-exp"):
     }
 
     model = genai.GenerativeModel(
-    model_name="gemini-2.0-flash-exp",
+    model_name=default_model_name,
     generation_config=generation_config,
     )
 
@@ -205,6 +231,7 @@ def launch():
     schema = None
     conn = None # Initialize conn to None
     cur = None # Initialize cur to None
+    model = None
     
     # Set up command-line arguments
     parser = argparse.ArgumentParser(description='A modern MySQL client')
@@ -288,8 +315,10 @@ def launch():
                     cur = conn.cursor(dictionary=True)
                 
                 if sql.startswith("translate"):
+                    if model == None:
+                        model = get_top_flash_model()
                     translate = sql[len("translate"):].strip()
-                    sql = extract_sql_command(askGemini(f"Answer with a single line Mysql SQL query to answer the following question '{translate}'. \n Please see the following schema to understand how to structure the sql {schema}"))
+                    sql = extract_sql_command(askGemini(f"Answer with a single line Mysql SQL query to answer the following question '{translate}'. \n Please see the following schema to understand how to structure the sql {schema}",model))
                     print(f" Running: {sql} ")
                 start_time = time.time()  # Record start time
                 cur.execute(sql)  # Execute SQL
