@@ -1,8 +1,10 @@
-# mysqlc - Modern MySQL client with a little GenAI magic (using gemini)
+# mysqlc - Modern MySQL client with a little GenAI magic
 
-We all love Mysql/Mariadb, but one thing which we all could benifit from is having a few more features in its barebones command line client. There are commercial options available which are significantly more powerful, but some things should just be free for all. This tiny project addresses a few of these gaps which I personally dislike. 
+We all love Mysql/Mariadb, but one thing which we all could benifit from is having a few more features in its barebones command line client. There are commercial options available which are significantly more powerful, but some things should just be free for all.  This tiny project addresses a few of these gaps which I personally dislike.
 
-I built this primarily for myself, but hope its helpful for others as well.
+Note that this project uses **Google Gemini** to help you quickly use GenAI smarts to create your queries. Feel free to reuse this code to add other adapters as you see fit.
+
+I built this primarily for myself, and hope its helpful for others as well.
 
 ## Features
 * Allow multi-line SQL query creation/editing
@@ -145,5 +147,12 @@ Mysql [hopot] SQL> translate using the table requests, please tell me which is t
 | 45.61.161.77    | 1  |
 +-----------------+----+
 </pre>
+
+## Risks/Warnings
+* This is a proof of concept. Don't trust it, but feel free to be inspired
+* The "translate" command world perfectly for simple operations, but may require a few attempts for more complex operations
+  * In a future version, I may introduce retries (which I do with gbash), but not in this current one
+* There is no input validation at all - again the assumption is that its being run by someone fully trusted
+* SQL History record could be a potential source of leak as well - we should assume the system is locked down
 
 

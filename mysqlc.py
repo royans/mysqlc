@@ -11,7 +11,7 @@ from prompt_toolkit.lexers import PygmentsLexer
 from pygments.lexers.sql import MySqlLexer
 import argparse
 
-version = 0.12
+version = 0.13
 
 # Database connection details from environment variables
 db_config = {
@@ -184,16 +184,6 @@ def get_database_schema(cursor):
         for column in columns:
             schema_str += f"  {column['Field']}: {column['Type']} , "
     return schema_str
-
-
-def _load_history(history_file):
-    """Loads command history from the history file."""
-    if os.path.exists(history_file):
-        with open(history_file, 'r') as f:
-            history = [line.strip() for line in f]
-    else:
-        history = []
-    return history
 
 def load_history(history_file):
     """Loads command history from the history file."""
