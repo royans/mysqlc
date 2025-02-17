@@ -1,8 +1,8 @@
 # mysqlc - the modern MySQL client
 
-We all love Mysql/Mariadb, but one thing whihc I don't like is its barebones command line client. There are commercial options available which are significantly more powerful, but some things should just be free for all. This tiny project addresses a few of these gaps which I personally dislike.
+We all love Mysql/Mariadb, but one thing which we all could benifit from is having a few more features in its barebones command line client. There are commercial options available which are significantly more powerful, but some things should just be free for all. This tiny project addresses a few of these gaps which I personally dislike. 
 
-Hope its helpful for others as well.
+I built this primarily for myself, but hope its helpful for others as well.
 
 ## Features
 * Allow multi-line SQL query creation/editing
