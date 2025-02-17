@@ -18,12 +18,13 @@ I built this primarily for myself, but hope its helpful for others as well.
 ## How to use
 * Setup environment variables in your shell
   * Required
-    * DB_USER='username'
-    * DB_PASSWORD='password'
-    * DB_HOST='hostname'
-    * DB_DATABASE='default_database' 
+    * DB_USER=*'username'*
+    * DB_PASSWORD=*'password'*
+    * DB_HOST=*'hostname'*
+    * DB_DATABASE=*'default_database'* 
   * Optional
-  * GEMINI_API_KEY='api_key'
+  * GEMINI_API_KEY=*'your_api_key_here'*
+
 * Or pass the variables as command line options
   <pre>
   options:
@@ -37,5 +38,7 @@ I built this primarily for myself, but hope its helpful for others as well.
   -g GEMINI_API_KEY, --gemini_api_key GEMINI_API_KEY
                         Gemini API key
   </pre>
+
 * Add the location of this directory to your PATH variable
+
 * Finally, execute: **mysqlc** 
