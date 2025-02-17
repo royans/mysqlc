@@ -11,7 +11,7 @@ from prompt_toolkit.lexers import PygmentsLexer
 from pygments.lexers.sql import MySqlLexer
 import argparse
 
-version = 0.15
+version = 0.16
 
 # Database connection details from environment variables
 db_config = {

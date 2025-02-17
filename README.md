@@ -12,6 +12,10 @@ I built this primarily for myself, and hope its helpful for others as well.
 * "history" command shows history of SQL execution
 * "!" command followed by the history id, will allow you to execute a previous command
 * "translate" command allows you to use "Google Gemini" to create and execute SQL queries for you
+  * Note that in some cases, you can skip "translate" and directly ask the question
+  * Examples
+    * translate: how many rows were added to table xyz in last 24 hours ?
+    * give me a list of top 10 cities along with their frequencies
 
 ## Required
 * You will need credentials to connect to a database
