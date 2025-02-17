@@ -24,6 +24,9 @@ db_config = {
 validSqlCommands = ("SELECT", "USE", "SHOW", "DESC","UPDATE", "INSERT", "DELETE", "CREATE", "ALTER", "DROP")
 validGenAISqlCommands = ("SELECT", "USE", "SHOW", "DESC")
 
+GenAICurrentSchema = None
+
+
 gemini_api_key = os.environ["GEMINI_API_KEY"]
 
 # History file path
@@ -109,7 +112,18 @@ Please see the following schema to understand how to structure the sql to answer
 \n\n
 {query}
 """
+        GenAICurrentSchema=schema
 
+    if GenAICurrentSchema != schema:
+        GenAICurrentSchema=schema
+        query = f"""
+Please note this is the latest database schema. The question will follow the schema:
+---------------
+    {schema} 
+---------------
+\n\n
+{query}        
+"""
     response = chat_session.send_message(query)
 
     # Append the current interaction to the history in the correct format.
@@ -291,7 +305,6 @@ def launch():
             if schema == None or db_config['database'] != current_db:
                 schema=(get_database_schema(cur))
                 db_config['database'] = current_db
-                #print(askGemini("tell me a joke"))
                  
             # Update the prompt
             prompt = f"Mysql [{current_db}] SQL> " if current_db else "Mysql SQL> "
@@ -368,9 +381,6 @@ def launch():
                     cur = conn.cursor(dictionary=True)  # Reset the cursor
                     # Retry the query
                     cur.execute(sql)
-                #else:
-                #    print(f"Error: {err.errno} {err}")  # Print the error message
-                #    conn.rollback()
 
     except mysql.connector.Error as err:
         if err.errno == mysql.connector.errorcode.CR_SERVER_LOST:
