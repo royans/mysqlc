@@ -11,7 +11,7 @@ from prompt_toolkit.lexers import PygmentsLexer
 from pygments.lexers.sql import MySqlLexer
 import argparse
 
-version = 0.14
+version = 0.15
 
 # Database connection details from environment variables
 db_config = {
@@ -20,6 +20,9 @@ db_config = {
     'host': os.getenv('DB_HOST'),
     'database': os.getenv('DB_DATABASE')
 }
+
+validSqlCommands = ("SELECT", "SHOW", "DESC","UPDATE", "INSERT", "DELETE", "CREATE", "ALTER", "DROP")
+validGenAISqlCommands = ("SELECT", "SHOW", "DESC")
 
 gemini_api_key = os.environ["GEMINI_API_KEY"]
 
@@ -93,11 +96,13 @@ def askGemini(query, schema, chat_history=None, default_model_name="gemini-2.0-f
 
     chat_session = model.start_chat(history=chat_history)
     
-    if chat_history == None:
+    if chat_history == None or len(chat_history)==0: 
         query = f"""
 You are a MySQL query helper who is helping a database admin in their regular job.
-Please note that the questions the user is asking assumes you will try to understand the context, the history and respond back with single line valid MySQL query which the admin can execute.
-Please see the following schema to understand how to structure the sql to answer the question which follows: 
+- Please note that the questions the user is asking assumes you will try to understand the context, the history and respond back with single line valid MySQL query which the admin can execute.
+Please see the following schema to understand how to structure the sql to answer the question which follows
+- Note that table names are case sensitive. Do not try to change them.
+- Here is the schema: 
 ---------------
     {schema} 
 ---------------
@@ -118,36 +123,6 @@ Please see the following schema to understand how to structure the sql to answer
     })
 
     return response.text, chat_history
-
-def _askGemini(query="",default_model_name="gemini-2.0-flash"):
-    import os
-    import google.generativeai as genai
-    
-    global gemini_api_key
-
-    genai.configure(api_key=gemini_api_key)
-
-    # Create the model
-    generation_config = {
-    "temperature": 1,
-    "top_p": 0.95,
-    "top_k": 40,
-    "max_output_tokens": 8192,
-    "response_mime_type": "text/plain",
-    }
-
-    model = genai.GenerativeModel(
-    model_name=default_model_name,
-    generation_config=generation_config,
-    )
-
-    chat_session = model.start_chat(history=[])
-
-    response = chat_session.send_message(query)
-
-    return (response.text)
-
-
 
 def print_formatted_results(cursor, results):
     """Prints the results in a formatted table."""
@@ -196,9 +171,7 @@ def extract_sql_command(sql_string):
   lines = sql_string.splitlines()
   for line in lines:
       line = line.strip()
-      # Currently I don't have safeguards in place to reduce errors, so I'll limit the execution to just SELECT call, but this is how you can open it up to allow broader
-      #if line.startswith(("SELECT", "UPDATE", "INSERT", "DELETE", "CREATE", "ALTER", "DROP")):
-      if line.startswith(("SELECT")):
+      if line.upper().startswith(validGenAISqlCommands):
           return line
   return None
 
@@ -358,8 +331,9 @@ def launch():
                     print("Connection lost. Reconnecting...")
                     conn = reconnect(db_config)
                     cur = conn.cursor(dictionary=True)
-                
-                if sql.startswith("translate"):
+
+                if sql.startswith("translate") or not sql.lstrip().upper().startswith(validSqlCommands):
+                    print(" [Requesting GenAI help]")
                     if model == None:
                         model = get_top_flash_model()
                     translate = sql[len("translate"):].strip()
