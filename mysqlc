@@ -31,3 +31,4 @@ fi
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 python "$SCRIPT_DIR/mysqlc.py" "$@"
 
+reset

@@ -1,4 +1,4 @@
-# mysqlc - Modern MySQL client with a little GenAI magic
+# mysqlc - Modern MySQL client with a GenAI boost
 
 We all love Mysql/Mariadb, but one thing which we all could benifit from is having a few more features in its barebones command line client. There are commercial options available which are significantly more powerful, but some things should just be free for all.  This tiny project addresses a few of these gaps which I personally dislike.
 
@@ -108,8 +108,7 @@ Mysql [hopot] SQL> translate how many rows are there in the table requests ?
 1 rows in set (0.010 sec)</pre>
 
 <pre>
-Mysql [hopot] SQL> translate using the table requests, please tell me which is the most popular 10 user_agents in the last 24 hours, show the frequency and sort in reverse order of freq
-                   uency
+Mysql [hopot] SQL> translate using the table requests, please tell me which is the most popular 10 user_agents in the last 24 hours, show the frequency and sort in reverse order of frequency
  
  Running: SELECT user_agent, COUNT(*) AS frequency FROM requests WHERE timestamp >= NOW() - INTERVAL 1 DAY GROUP BY user_agent ORDER BY frequency DESC LIMIT 10; 
 +----------------------------------------------------------------------------------------------------------------------------------------------------------+----+

@@ -75,7 +75,7 @@ def askGemini(query, schema, chat_history=None, default_model_name="gemini-2.0-f
     import os
     import google.generativeai as genai
 
-    global gemini_api_key
+    global gemini_api_key, GenAICurrentSchema
 
     genai.configure(api_key=gemini_api_key)
 
@@ -187,6 +187,8 @@ def extract_sql_command(sql_string):
       line = line.strip()
       if line.upper().startswith(validGenAISqlCommands):
           return line
+      else:
+          print("Answer (not executing): {line}")
   return None
 
 def reconnect(conn_params):
