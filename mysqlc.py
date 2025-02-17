@@ -368,9 +368,9 @@ def launch():
                     cur = conn.cursor(dictionary=True)  # Reset the cursor
                     # Retry the query
                     cur.execute(sql)
-                else:
-                    print(f"Error: {err.errno} {err}")  # Print the error message
-                    conn.rollback()
+                #else:
+                #    print(f"Error: {err.errno} {err}")  # Print the error message
+                #    conn.rollback()
 
     except mysql.connector.Error as err:
         if err.errno == mysql.connector.errorcode.CR_SERVER_LOST:
