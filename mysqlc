@@ -6,7 +6,48 @@ REQUIRED_VARS=("DB_USER" "DB_PASSWORD" "DB_HOST" "DB_DATABASE")
 # Optional environment variable
 OPTIONAL_VAR="GEMINI_API_KEY"
 
-# Check for required variables
+# Function to check and set variables from command line arguments
+check_and_set_variable() {
+  local var_name="$1"
+  local arg_value="$2"
+
+  if [[ -z "${!var_name}" && ! -z "$arg_value" ]]; then
+    export "$var_name"="$arg_value"
+    echo "Setting $var_name from command line: $arg_value"
+  fi
+}
+
+# Process command line arguments
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --user)
+      check_and_set_variable "DB_USER" "$2"
+      shift 2
+      ;;
+    --password)
+      check_and_set_variable "DB_PASSWORD" "$2"
+      shift 2
+      ;;
+    --host)
+      check_and_set_variable "DB_HOST" "$2"
+      shift 2
+      ;;
+    --database)
+      check_and_set_variable "DB_DATABASE" "$2"
+      shift 2
+      ;;
+    --gemini_api_key)
+      check_and_set_variable "GEMINI_API_KEY" "$2"
+      shift 2
+      ;;
+    *)  # Handle other arguments (including --port and --no-password)
+      break  # Stop processing arguments when encountering unknown ones
+      ;;
+  esac
+done
+
+
+# Check for required variables AFTER processing command line arguments
 missing_vars=()
 for var in "${REQUIRED_VARS[@]}"; do
   if [[ -z "${!var}" ]]; then
@@ -15,7 +56,7 @@ for var in "${REQUIRED_VARS[@]}"; do
 done
 
 if [[ ${#missing_vars[@]} -gt 0 ]]; then
-  echo "Error: Missing required environment variables:"
+  echo "Error: Missing required environment variables (even after checking command line):"
   for var in "${missing_vars[@]}"; do
     echo "  $var"
   done
@@ -27,10 +68,7 @@ if [[ -z "${!OPTIONAL_VAR}" ]]; then
   echo "Warning: Optional environment variable $OPTIONAL_VAR is not set."
 fi
 
-
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 original_settings=$(stty -g)
-python "$SCRIPT_DIR/mysqlc.py" "$@"
+python "$SCRIPT_DIR/mysqlc.py" "$@" # Pass all remaining arguments to the Python script
 eval "stty $(echo \"$original_settings\")"
-
-#reset
