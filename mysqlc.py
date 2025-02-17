@@ -182,7 +182,7 @@ mysql: A modern MySQL client
 - Version: {version}
 - Source: https://github.com/royans/mysqlc
 
-Note: Press "ALT+Enter" when to execute command.
+Note: Press "ALT+Enter" to execute command.
 ------------------------------------------------          
 """)
 
