@@ -103,6 +103,9 @@ def askGemini(query, schema, chat_history=None, default_model_name="gemini-2.0-f
         query = f"""
 You are a MySQL query helper who is helping a database admin in their regular job.
 - Please note that the questions the user is asking assumes you will try to understand the context, the history and respond back with single line valid MySQL query which the admin can execute.
+- If the question has nothing to do with the current database, please do answer using a SELECT command: 
+   - Example: if the question is "What is the capital of India", you could answer with " SELECT 'New Delhi'; " 
+
 Please see the following schema to understand how to structure the sql to answer the question which follows
 - Note that table names are case sensitive. Do not try to change them.
 - Here is the schema: 
@@ -173,23 +176,24 @@ def print_formatted_results(cursor, results):
     print(separator)
 
 def extract_sql_command(sql_string):
-  """
-  Extracts the first SQL command from a multiline string.
+    """
+    Extracts the first SQL command from a multiline string.
 
-  Args:
-    sql_string: The multiline string containing SQL commands.
+    Args:
+        sql_string: The multiline string containing SQL commands.
 
-  Returns:
-    The first SQL command found, without quotes.
-  """
-  lines = sql_string.splitlines()
-  for line in lines:
-      line = line.strip()
-      if line.upper().startswith(validGenAISqlCommands):
-          return line
-      else:
-          print("Answer (not executing): {line}")
-  return None
+    Returns:
+        The first SQL command found, without quotes.
+    """
+    lines = sql_string.splitlines()
+    
+    #print(lines)
+    for line in lines:
+        line = line.strip()
+        if line.upper().startswith(validGenAISqlCommands):
+            return line
+    print(f"Answer (not executing): {line}")
+    return None
 
 def reconnect(conn_params):
     """Attempts to reconnect to the MySQL server."""
