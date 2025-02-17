@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Required environment variables
+REQUIRED_VARS=("DB_USER" "DB_PASSWORD" "DB_HOST" "DB_DATABASE")
+
+# Optional environment variable
+OPTIONAL_VAR="GEMINI_API_KEY"
+
+# Check for required variables
+missing_vars=()
+for var in "${REQUIRED_VARS[@]}"; do
+  if [[ -z "${!var}" ]]; then
+    missing_vars+=("$var")
+  fi
+done
+
+if [[ ${#missing_vars[@]} -gt 0 ]]; then
+  echo "Error: Missing required environment variables:"
+  for var in "${missing_vars[@]}"; do
+    echo "  $var"
+  done
+  exit 1 # Exit with an error code
+fi
+
+# Check for optional variable
+if [[ -z "${!OPTIONAL_VAR}" ]]; then
+  echo "Warning: Optional environment variable $OPTIONAL_VAR is not set."
+fi
+
+
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+python "$SCRIPT_DIR/mysqlc.py"
+
