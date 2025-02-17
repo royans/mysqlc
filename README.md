@@ -11,6 +11,38 @@ I built this primarily for myself, but hope its helpful for others as well.
 * "!" command followed by the history id, will allow you to execute a previous command
 * "translate" command allows you to use "Google Gemini" to create and execute SQL queries for you
 
+## Required
+* You will need credentials to connect to a database
+* Optionally, you can provide Gemini API key (get it from https://aistudio.google.com/apikey) if you need Gemini to help you create SQL scripts. 
+
+## How to use
+* Setup environment variables in your shell
+  * Required
+    * DB_USER=*'username'*
+    * DB_PASSWORD=*'password'*
+    * DB_HOST=*'hostname'*
+    * DB_DATABASE=*'default_database'* 
+  * Optional
+  * GEMINI_API_KEY=*'your_api_key_here'*
+
+* Or pass the variables as command line options
+  <pre>
+  options:
+  -h, --help            show this help message and exit
+  -u USER, --user USER  MySQL username
+  -p PASSWORD, --password PASSWORD
+                        MySQL password
+  -H HOST, --host HOST  MySQL host
+  -d DATABASE, --database DATABASE
+                        Default database
+  -g GEMINI_API_KEY, --gemini_api_key GEMINI_API_KEY
+                        Gemini API key
+  </pre>
+
+* Add the location of this directory to your PATH variable
+
+* Finally, execute: **mysqlc** 
+
 ## Examples
 
 ### Basic usage
@@ -115,34 +147,3 @@ Mysql [hopot] SQL> translate using the table requests, please tell me which is t
 </pre>
 
 
-## Required
-* You will need credentials to connect to a database
-* Optionally, you can provide Gemini API key (get it from https://aistudio.google.com/apikey) if you need Gemini to help you create SQL scripts. 
-
-## How to use
-* Setup environment variables in your shell
-  * Required
-    * DB_USER=*'username'*
-    * DB_PASSWORD=*'password'*
-    * DB_HOST=*'hostname'*
-    * DB_DATABASE=*'default_database'* 
-  * Optional
-  * GEMINI_API_KEY=*'your_api_key_here'*
-
-* Or pass the variables as command line options
-  <pre>
-  options:
-  -h, --help            show this help message and exit
-  -u USER, --user USER  MySQL username
-  -p PASSWORD, --password PASSWORD
-                        MySQL password
-  -H HOST, --host HOST  MySQL host
-  -d DATABASE, --database DATABASE
-                        Default database
-  -g GEMINI_API_KEY, --gemini_api_key GEMINI_API_KEY
-                        Gemini API key
-  </pre>
-
-* Add the location of this directory to your PATH variable
-
-* Finally, execute: **mysqlc** 
