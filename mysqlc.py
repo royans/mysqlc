@@ -14,7 +14,7 @@ db_config = {
 }
 
 # History file path
-history_file = os.path.expanduser('~/.lsql.history')
+history_file = os.path.expanduser('~/.mysqlc.history')
 
 bindings = KeyBindings()
 
@@ -103,6 +103,7 @@ def extract_sql_command(sql_string):
   lines = sql_string.splitlines()
   for line in lines:
       line = line.strip()
+      # Currently I don't have safeguards in place to reduce errors, so I'll limit the execution to just SELECT call, but this is how you can open it up to allow broader
       #if line.startswith(("SELECT", "UPDATE", "INSERT", "DELETE", "CREATE", "ALTER", "DROP")):
       if line.startswith(("SELECT")):
           return line
@@ -133,6 +134,37 @@ def get_database_schema(cursor):
             schema_str += f"  {column['Field']}: {column['Type']} , "
     return schema_str
 
+
+def _load_history(history_file):
+    """Loads command history from the history file."""
+    if os.path.exists(history_file):
+        with open(history_file, 'r') as f:
+            history = [line.strip() for line in f]
+    else:
+        history = []
+    return history
+
+def load_history(history_file):
+    """Loads command history from the history file."""
+    history = []
+    current_command = ""
+    if os.path.exists(history_file):
+        with open(history_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    # New command starts
+                    if current_command:
+                        history.append(current_command.strip())
+                        current_command = ""
+                elif line.startswith("+"):
+                    # Add to current command
+                    current_command += line[1:].strip() + " "  # Remove '+' and add space
+            # Add the last command if it exists
+            if current_command:
+                history.append(current_command.strip())
+    return history
+
 def main():
     schema = None
     try:
@@ -140,8 +172,10 @@ def main():
         cur = conn.cursor(dictionary=True)  # Use dictionary cursor for easier access
         conn.autocommit = False  # disable autocommit
 
-        sql_accumulator = ""  # accumulator to store the sql.
-
+        history = load_history(history_file)  # Load history
+        sql_accumulator = ""
+        
+        
         while True:
             # Get the current database name
             current_db = conn.database
@@ -158,10 +192,27 @@ def main():
             if not line:
                 continue
 
-            sql_accumulator += line + "\n"  # add the line to the accumulator.
-            sql = sql_accumulator.strip()
-            sql_accumulator = ""  # reset the accumulator.
+            if line.strip() == "history":
+                # Print the last 100 commands with line numbers
+                for i, cmd in enumerate(history[-100:], start=1):
+                    print(f"{i}. {cmd}")
+                continue
 
+            if line.startswith("!"):
+                try:
+                    # Extract the command number and execute it
+                    cmd_num = int(line[1:])
+                    sql = history[cmd_num - 1]
+                    print(f"Executing: {sql}")
+                except (IndexError, ValueError):
+                    print("Invalid history command.")
+                    continue
+            else:
+                # Accumulate SQL and execute as before
+                sql_accumulator += line + "\n"
+                sql = sql_accumulator.strip()
+                sql_accumulator = ""
+                
             try:
                 if sql.startswith("translate"):
                     translate = sql[len("translate"):].strip()
@@ -180,6 +231,7 @@ def main():
                 except mysql.connector.errors.ProgrammingError:
                     print("Query executed successfully.")
 
+                history.append(sql)
                 conn.commit()  # manual commit.
 
             except mysql.connector.Error as e:
