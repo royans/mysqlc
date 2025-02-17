@@ -1,7 +1,7 @@
 # mysqlc - the modern MySQL client
 
 ## Features
-* Allows multi-line SQL query edit
+* Allow multi-line SQL query creation/editing
 * Maintains/saves execution history
 * "history" command shows history of SQL execution
 * "!" command followed by the history id, will allow you to execute a previous command
@@ -19,4 +19,6 @@
     * DB_HOST='hostname'
     * DB_DATABASE='default_database' 
   * Optional
-    * GEMINI_API_KEY='api_key'
+  * GEMINI_API_KEY='api_key'
+* Add the location of this directory to your PATH variable
+* Finally, execute: **mysqlc** 
