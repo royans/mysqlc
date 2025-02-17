@@ -7,9 +7,11 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 from prompt_toolkit.shortcuts.prompt import PromptSession
 from prompt_toolkit.keys import Keys
+from prompt_toolkit.lexers import PygmentsLexer
+from pygments.lexers.sql import MySqlLexer
 import argparse
 
-version = 0.10
+version = 0.11
 
 # Database connection details from environment variables
 db_config = {
@@ -235,7 +237,7 @@ def launch():
             prompt = f"Mysql [{current_db}] SQL> " if current_db else "Mysql SQL> "
 
             try:
-                line = session.prompt(prompt)
+                line = session.prompt(prompt, lexer=PygmentsLexer(MySqlLexer))
             except (KeyboardInterrupt, EOFError):  # Catch Ctrl+C and Ctrl+D
                 print("\nExiting...")
                 break
