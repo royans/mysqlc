@@ -187,7 +187,7 @@ def extract_sql_command(sql_string):
     """
     lines = sql_string.splitlines()
     
-    print(lines)
+    #print(lines)
     for line in lines:
         line = line.strip()
         if line.upper().startswith(validGenAISqlCommands):
