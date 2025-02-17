@@ -369,7 +369,7 @@ def launch():
                     # Retry the query
                     cur.execute(sql)
                 else:
-                    print(f"Error: {err}")  # Print the error message
+                    print(f"Error: {err.errno} {err}")  # Print the error message
                     conn.rollback()
 
     except mysql.connector.Error as err:
