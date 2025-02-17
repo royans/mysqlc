@@ -1,5 +1,6 @@
-mysql_connector_repackaged==0.3.1
-prompt_toolkit==3.0.50
-prompt_toolkit==3.0.36
-protobuf==4.21.12
-Pygments==2.14.0
+protobuf
+mysql-connector-python
+prompt_toolkit
+pygments
+requests
+google-generativeai
