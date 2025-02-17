@@ -11,7 +11,7 @@ from prompt_toolkit.lexers import PygmentsLexer
 from pygments.lexers.sql import MySqlLexer
 import argparse
 
-version = 0.13
+version = 0.14
 
 # Database connection details from environment variables
 db_config = {
@@ -65,7 +65,61 @@ def get_top_flash_model():
     print(f"Using Gemini model: {filtered_models[0]}")
     return filtered_models[0]
 
-def askGemini(query="",default_model_name="gemini-2.0-flash"):
+def askGemini(query, schema, chat_history=None, default_model_name="gemini-2.0-flash"):
+    import os
+    import google.generativeai as genai
+
+    global gemini_api_key
+
+    genai.configure(api_key=gemini_api_key)
+
+    # Create the model
+    generation_config = {
+        "temperature": 1,
+        "top_p": 0.95,
+        "top_k": 40,
+        "max_output_tokens": 8192,
+        "response_mime_type": "text/plain",
+    }
+
+    model = genai.GenerativeModel(
+        model_name=default_model_name,
+        generation_config=generation_config,
+    )
+
+    # Initialize chat history if not provided
+    if chat_history is None:
+        chat_history = []
+
+    chat_session = model.start_chat(history=chat_history)
+    
+    if chat_history == None:
+        query = f"""
+You are a MySQL query helper who is helping a database admin in their regular job.
+Please note that the questions the user is asking assumes you will try to understand the context, the history and respond back with single line valid MySQL query which the admin can execute.
+Please see the following schema to understand how to structure the sql to answer the question which follows: 
+---------------
+    {schema} 
+---------------
+\n\n
+{query}
+"""
+
+    response = chat_session.send_message(query)
+
+    # Append the current interaction to the history in the correct format.
+    chat_history.append({
+        "role": "user",  # Changed to "role": "user"
+        "parts": [{"text": query}]
+    })
+    chat_history.append({
+        "role": "model",  # Changed to "role": "model"
+        "parts": [{"text": response.text}]
+    })
+
+    return response.text, chat_history
+
+def _askGemini(query="",default_model_name="gemini-2.0-flash"):
     import os
     import google.generativeai as genai
     
@@ -222,6 +276,7 @@ def launch():
     conn = None # Initialize conn to None
     cur = None # Initialize cur to None
     model = None
+    chat_history = []  # Initialize chat history outside the loop
     
     # Set up command-line arguments
     parser = argparse.ArgumentParser(description='A modern MySQL client')
@@ -308,7 +363,14 @@ def launch():
                     if model == None:
                         model = get_top_flash_model()
                     translate = sql[len("translate"):].strip()
-                    sql = extract_sql_command(askGemini(f"Answer with a single line Mysql SQL query to answer the following question '{translate}'. \n Please see the following schema to understand how to structure the sql {schema}",model))
+                    # Pass the chat history to askGemini
+                    _sql, chat_history = askGemini(
+                        f"Answer with a single line Mysql SQL query to answer the following question '{translate}'. \n",
+                        schema,
+                        chat_history,  # Pass the history here.
+                        model,
+                    )
+                    sql = extract_sql_command(_sql)
                     print(f" Running: {sql} ")
                 start_time = time.time()  # Record start time
                 cur.execute(sql)  # Execute SQL
@@ -326,14 +388,14 @@ def launch():
                 history.append(sql)
                 conn.commit()  # manual commit.
 
-            except mysql.connector.Error as e:
+            except mysql.connector.Error as err:
                 if err.errno == mysql.connector.errorcode.CR_SERVER_LOST:
                     conn = reconnect(db_config) # Reconnect
                     cur = conn.cursor(dictionary=True)  # Reset the cursor
                     # Retry the query
                     cur.execute(sql)
                 else:
-                    print(f"Error: {e}")  # Print the error message
+                    print(f"Error: {err}")  # Print the error message
                     conn.rollback()
 
     except mysql.connector.Error as err:
