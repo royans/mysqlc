@@ -68,6 +68,7 @@ def askGemini(query="",model_name="gemini-2.0-flash-exp"):
     return (response.text)
 
 
+
 def print_formatted_results(cursor, results):
     """Prints the results in a formatted table."""
 
@@ -121,7 +122,19 @@ def extract_sql_command(sql_string):
           return line
   return None
 
-
+def reconnect(conn_params):
+    """Attempts to reconnect to the MySQL server."""
+    try:
+        cnx = mysql.connector.connect(**conn_params)
+        return cnx
+    except mysql.connector.Error as err:
+        if err.errno == mysql.connector.errorcode.CR_SERVER_LOST:
+            print("Reconnecting...")
+            time.sleep(2)  # Optional: Wait before retrying
+            return reconnect(conn_params)  # Recursive call to retry
+        else:
+            raise err  # Re-raise other MySQL errors
+        
 def get_database_schema(cursor):
     """
     Retrieves the schema of all tables in the current database.
@@ -190,6 +203,8 @@ Note: Press "ALT+Enter" to execute command.
 
 def launch():
     schema = None
+    conn = None # Initialize conn to None
+    cur = None # Initialize cur to None
     
     # Set up command-line arguments
     parser = argparse.ArgumentParser(description='A modern MySQL client')
@@ -267,6 +282,11 @@ def launch():
                 sql_accumulator = ""
                 
             try:
+                if not conn.is_connected():
+                    print("Connection lost. Reconnecting...")
+                    conn = reconnect(db_config)
+                    cur = conn.cursor(dictionary=True)
+                
                 if sql.startswith("translate"):
                     translate = sql[len("translate"):].strip()
                     sql = extract_sql_command(askGemini(f"Answer with a single line Mysql SQL query to answer the following question '{translate}'. \n Please see the following schema to understand how to structure the sql {schema}"))
@@ -288,11 +308,24 @@ def launch():
                 conn.commit()  # manual commit.
 
             except mysql.connector.Error as e:
-                print(f"Error: {e}")  # Print the error message
-                # Additional error handling or logging can be added here
+                if err.errno == mysql.connector.errorcode.CR_SERVER_LOST:
+                    conn = reconnect(db_config) # Reconnect
+                    cur = conn.cursor(dictionary=True)  # Reset the cursor
+                    # Retry the query
+                    cur.execute(sql)
+                else:
+                    print(f"Error: {e}")  # Print the error message
+                    conn.rollback()
 
-    except mysql.connector.Error as e:
-        print(f"Error connecting to MySQL Platform: {e}")
+    except mysql.connector.Error as err:
+        if err.errno == mysql.connector.errorcode.CR_SERVER_LOST:
+            conn = reconnect(db_config) # Reconnect
+            cur = conn.cursor(dictionary=True)  # Reset the cursor
+            # Retry the query
+            cur.execute(sql)
+            print(f"Error connecting to MySQL Platform: {e}")
+        else:
+            raise err
     finally:
         if conn and conn.is_connected():
             conn.close()
