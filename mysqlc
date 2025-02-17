@@ -29,6 +29,8 @@ fi
 
 
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+original_settings=$(stty -g)
 python "$SCRIPT_DIR/mysqlc.py" "$@"
+eval "stty $(echo \"$original_settings\")"
 
-reset
+#reset

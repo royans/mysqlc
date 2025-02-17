@@ -187,7 +187,7 @@ def extract_sql_command(sql_string):
     """
     lines = sql_string.splitlines()
     
-    #print(lines)
+    print(lines)
     for line in lines:
         line = line.strip()
         if line.upper().startswith(validGenAISqlCommands):
@@ -272,12 +272,15 @@ def launch():
     chat_history = []  # Initialize chat history outside the loop
     
     # Set up command-line arguments
-    parser = argparse.ArgumentParser(description='A modern MySQL client')
+    parser = argparse.ArgumentParser(description='A Smarter Modern MySQL client')
+    parser.add_argument('--port', help='MySQL port', type=int, default=3306)  # Add port argument
     parser.add_argument('-u', '--user', help='MySQL username')
     parser.add_argument('-p', '--password', help='MySQL password')
     parser.add_argument('-H', '--host', help='MySQL host')
     parser.add_argument('-d', '--database', help='Default database')
     parser.add_argument('-g', '--gemini_api_key', help='Gemini API key')
+    parser.add_argument('--no-password', action='store_true', help='Do not use a password even if it is in env variables')  # Add no-password flag
+   
     args = parser.parse_args()
 
     # Override environment variables with command-line arguments
@@ -289,6 +292,10 @@ def launch():
         db_config['host'] = args.host
     if args.database:
         db_config['database'] = args.database
+    if args.port:
+        db_config['port'] = args.port  # Add port to db_config
+    if args.no_password and 'password' in db_config:  # If no-password flag is set, remove password from db_config
+        del db_config['password']        
     if args.gemini_api_key:
         global gemini_api_key
         gemini_api_key = args.gemini_api_key
