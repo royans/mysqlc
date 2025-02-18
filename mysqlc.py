@@ -147,6 +147,37 @@ def print_formatted_results(cursor, results):
     if not results:
         return
 
+    columns = [desc[0] for desc in cursor.description]  # Extract column names directly
+
+    col_widths = [len(col) for col in columns] # Initialize with header length
+
+    # Calculate column widths, including NULL/None representation
+    for row in results:
+        for i, col in enumerate(columns):
+            value = row[col]
+            col_widths[i] = max(col_widths[i], len(str(value) if value is not None else "None"))
+
+    # Print header
+    header = "|" + "|".join(f" {col:<{col_widths[i]}} " for i, col in enumerate(columns)) + "|"
+    separator = "+" + "+".join("-" * (col_widths[i] + 2) for i in range(len(columns))) + "+"
+    print(separator)
+    print(header)
+    print(separator)
+
+    # Print rows
+    for row in results:
+        row_str = "|" + "|".join(f" {str(row[col]) if row[col] is not None else ' None':<{col_widths[i]}} " for i, col in enumerate(columns)) + "|"
+        print(row_str)
+
+    # Print footer
+    print(separator)
+
+def _print_formatted_results(cursor, results):
+    """Prints the results in a formatted table."""
+
+    if not results:
+        return
+
         # Get column names (extract just the column name from the tuple)
     columns = [desc for desc in cursor.description]  # Corrected line
 
