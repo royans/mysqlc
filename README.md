@@ -105,7 +105,6 @@ Executing: show tables
 +-----------------+
 </pre>
 
-
 ### Using Gemini to create the SQL queries for you
 <pre>
 Mysql [hopot] SQL> how many rows are there in the table requests ?
@@ -118,6 +117,8 @@ Mysql [hopot] SQL> how many rows are there in the table requests ?
 | 12137    |
 +----------+
 1 rows in set (0.010 sec)
+</pre>
+
 <pre>
 Mysql [hopot] SQL> translate using the table requests, please tell me which is the most popular 10 user_agents in the last 24 hours, show the frequency and sort in reverse order of frequency
  
@@ -135,6 +136,7 @@ Mysql [hopot] SQL> translate using the table requests, please tell me which is t
 | python-requests/2.22.0                                                                                                   | 1         |
 +--------------------------------------------------------------------------------------------------------------------------+-----------+
 </pre>
+
 <pre>
 Mysql [hopot] SQL> desc requests
 +-----------------+------------------+------+-----+---------------------+----------------+
