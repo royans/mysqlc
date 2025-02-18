@@ -11,6 +11,7 @@ I built this primarily for myself, and hope its helpful for others as well.
 * Maintains/saves execution history
 * "history" command shows history of SQL execution
 * "!" command followed by the history id, will allow you to execute a previous command
+* Autocomplete support for some of the commands an table/column names  
 * "translate" command allows you to use "Google Gemini" to create and execute SQL queries for you
   * Note that in some cases, you can skip "translate" and directly ask the question
   * Examples
