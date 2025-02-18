@@ -33,8 +33,13 @@ I built this primarily for myself, and hope its helpful for others as well.
 
 * Or pass the variables as command line options
   <pre>
-  options:
+usage: mysqlc.py [-h] [--port PORT] [-u USER] [-p PASSWORD] [-H HOST] [-d DATABASE] [-g GEMINI_API_KEY] [--no-password]
+
+A Smarter Modern MySQL client
+
+options:
   -h, --help            show this help message and exit
+  --port PORT           MySQL port
   -u USER, --user USER  MySQL username
   -p PASSWORD, --password PASSWORD
                         MySQL password
@@ -43,6 +48,7 @@ I built this primarily for myself, and hope its helpful for others as well.
                         Default database
   -g GEMINI_API_KEY, --gemini_api_key GEMINI_API_KEY
                         Gemini API key
+  --no-password         Do not use a password even if it is in env variables
   </pre>
 
 * Add the location of this directory to your PATH variable
@@ -102,15 +108,16 @@ Executing: show tables
 
 ### Using Gemini to create the SQL queries for you
 <pre>
-Mysql [hopot] SQL> translate how many rows are there in the table requests ?
+Mysql [hopot] SQL> how many rows are there in the table requests ?
+ 
+ [Requesting GenAI help]
  Running: SELECT COUNT(*) FROM requests; 
 +----+
 | COUNT(*) |
 +----+
 | 40 |
 +----+
-1 rows in set (0.010 sec)</pre>
-
+1 rows in set (0.010 sec)
 <pre>
 Mysql [hopot] SQL> translate using the table requests, please tell me which is the most popular 10 user_agents in the last 24 hours, show the frequency and sort in reverse order of frequency
  
@@ -131,24 +138,41 @@ Mysql [hopot] SQL> translate using the table requests, please tell me which is t
 +----------------------------------------------------------------------------------------------------------------------------------------------------------+----+
 </pre>
 <pre>
-Mysql [hopot] SQL> translate using the table requests, please tell me which is the most popular 10 IP addresses in the last 24 hours, show the frequency and sort in reverse order of fre
-                   quency
- 
- Running: SELECT remote_ip, COUNT(*) AS frequency FROM requests WHERE timestamp >= NOW() - INTERVAL 1 DAY GROUP BY remote_ip ORDER BY frequency DESC LIMIT 10; 
-+-----------------+----+
-| remote_ip       | frequency |
-+-----------------+----+
-| 138.68.82.23    | 16 |
-| 159.203.96.42   | 16 |
-| 3.236.6.49      | 9  |
-| 13.37.233.235   | 2  |
-| 147.182.231.184 | 2  |
-| 23.150.248.224  | 2  |
-| 195.26.242.224  | 1  |
-| 194.38.23.16    | 1  |
-| 41.249.72.163   | 1  |
-| 45.61.161.77    | 1  |
-+-----------------+----+
+Mysql [hopot] SQL> desc requests
++-----------------+------------------+-----+-----+---------------------+----------------+
+| Field           | Type             | Null | Key | Default             | Extra          |
++-----------------+------------------+-----+-----+---------------------+----------------+
+| id              | int(10) unsigned | NO  | PRI | None                | auto_increment |
+| timestamp       | timestamp        | NO  | MUL | current_timestamp() |                |
+| remote_ip       | varchar(45)      | NO  | MUL | None                |                |
+| request_method  | varchar(10)      | NO  |     | None                |                |
+| request_uri     | varchar(255)     | NO  | MUL | None                |                |
+| user_agent      | text             | YES |     | None                |                |
+| referer         | text             | YES |     | None                |                |
+| request_headers | text             | YES |     | None                |                |
+| request_body    | text             | YES |     | None                |                |
+| response_code   | int(11)          | YES |     | None                |                |
++-----------------+------------------+-----+-----+---------------------+----------------+
+
+Mysql [hopot] SQL> list the top 10 request_uri in the last 1 week which had a response_code of 200
+ [Requesting GenAI help]
+ Running: SELECT request_uri, COUNT(*) AS frequency FROM requests WHERE timestamp >= NOW() - INTERVAL 1 WEEK AND response_code = 200 GROUP BY request_uri ORDER BY frequency DESC LIMIT 10; 
++----------------------------------+----+
+| request_uri                      | frequency |
++----------------------------------+----+
+| /debug/default/view?panel=config | 44 |
+| /phpmyadmin/                     | 37 |
+| /.env                            | 28 |
+| /.git/config                     | 22 |
+| /tool/view/phpinfo.view.php      | 16 |
+| /debug/default/view.html         | 16 |
+| /debug/default/view              | 16 |
+| /frontend/web/debug/default/view | 16 |
+| /web/debug/default/view          | 16 |
+| /info.php                        | 14 |
++----------------------------------+----+
+10 rows in set (0.370 sec)
+
 </pre>
 
 ## Risks/Warnings
