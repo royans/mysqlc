@@ -6,12 +6,15 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 from prompt_toolkit.shortcuts.prompt import PromptSession
+from prompt_toolkit.filters import Condition
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.lexers import PygmentsLexer
 from pygments.lexers.sql import MySqlLexer
 import argparse
+from prompt_toolkit.completion import NestedCompleter, WordCompleter
+from prompt_toolkit.application import get_app # Import get_app
 
-version = 0.16
+version = 0.17
 
 # Database connection details from environment variables
 db_config = {
@@ -26,14 +29,19 @@ validGenAISqlCommands = ("SELECT", "USE", "SHOW", "DESC")
 
 GenAICurrentSchema = None
 
+history = {} 
 
 gemini_api_key = os.environ["GEMINI_API_KEY"]
 
 # History file path
 history_file = os.path.expanduser('~/.mysqlc.history')
 
+sql_completer = WordCompleter([], ignore_case=True)
 bindings = KeyBindings()
 
+
+    
+    
 @bindings.add('tab')
 def _(event: KeyPressEvent):
     "Allow tabs to be inserted as input."
@@ -42,7 +50,8 @@ def _(event: KeyPressEvent):
 session = PromptSession(
     history=FileHistory(history_file),
     multiline=True,
-    key_bindings=bindings
+    key_bindings=bindings,
+    completer=sql_completer  # Add the completer to the session
 )
 
 def get_top_flash_model():
@@ -68,7 +77,7 @@ def get_top_flash_model():
         filtered_models.sort(reverse=True)
     except Exception as e:
         return
-    print(f"Using Gemini model: {filtered_models[0]}")
+    print(f"   -- Using Gemini model: {filtered_models[0]}")
     return filtered_models[0]
 
 def askGemini(query, schema, chat_history=None, default_model_name="gemini-2.0-flash"):
@@ -172,40 +181,6 @@ def print_formatted_results(cursor, results):
     # Print footer
     print(separator)
 
-def _print_formatted_results(cursor, results):
-    """Prints the results in a formatted table."""
-
-    if not results:
-        return
-
-        # Get column names (extract just the column name from the tuple)
-    columns = [desc for desc in cursor.description]  # Corrected line
-
-    col_width = 10
-    col_widths = []
-    # Calculate column widths
-    for i in range(len(columns)):
-        
-        col_width = 0
-        for row in results:
-            col_width = max(col_width, len(str(row[columns[i][0]])))
-    
-        col_widths.append(col_width)
-        
-    # Print header
-    header = "|" + "|".join(f" {columns[i][0]:<{col_widths[i]}} " for i in range(len(columns))) + "|"
-    separator = "+" + "+".join("-" * (col_widths[i] + 2) for i in range(len(columns))) + "+"
-    print(separator)
-    print(header)
-    print(separator)
-    # Print rows
-    for row in results:
-        row_str = "|" + "|".join(f" {str(row[columns[i][0]]):<{col_widths[i]}} " for i in range(len(columns))) + "|"
-        print(row_str)
-
-    # Print footer
-    print(separator)
-
 def extract_sql_command(sql_string):
     """
     Extracts the first SQL command from a multiline string.
@@ -265,24 +240,43 @@ def get_database_schema(cursor):
 
 def load_history(history_file):
     """Loads command history from the history file."""
-    history = []
-    current_command = ""
+    global history
     if os.path.exists(history_file):
         with open(history_file, 'r') as f:
+            row_id = 1
+            current_command = ""  # Initialize current_command here
             for line in f:
                 line = line.strip()
                 if not line or line.startswith("#"):
                     # New command starts
                     if current_command:
-                        history.append(current_command.strip())
+                        history[row_id] = current_command.strip()
+                        row_id += 1
                         current_command = ""
                 elif line.startswith("+"):
-                    # Add to current command
-                    current_command += line[1:].strip() + " "  # Remove '+' and add space
+                    # Add to previous command
+                    current_command += " " + line[1:].strip()
+                else:
+                    # New command
+                    if current_command:  # Add previous command if exists
+                        history[row_id] = current_command.strip()
+                        row_id += 1
+                    current_command = line
             # Add the last command if it exists
             if current_command:
-                history.append(current_command.strip())
+                history[row_id] = current_command.strip()
     return history
+
+def save_history(history_file):
+    """Saves command history to the history file."""
+    global history
+    try:
+        with open(history_file, 'w') as f:
+            for row_id, cmd in history.items():
+                f.write(f"{cmd}\n")
+    except Exception as e:
+        print(f"Error saving history: {e}")
+
 
 def infobanner():
     print(f"""
@@ -295,24 +289,122 @@ Note: Press "ALT+Enter" to execute command.
 ------------------------------------------------          
 """)
 
+
+
+def broken_update_completer(cursor):
+    """Updates the WordCompleter with SQL keywords and table/column names."""
+
+    sql_keywords = [
+        "SELECT", "FROM", "WHERE", "AND", "OR", "INSERT", "UPDATE", "DELETE",
+        "CREATE", "ALTER", "DROP", "TABLE", "DATABASE", "INDEX", "VIEW",
+        "USE", "SHOW", "DESCRIBE", "EXPLAIN", "GRANT", "REVOKE", "COMMIT",
+        "ROLLBACK", "SAVEPOINT", "SET", "NULL", "TRUE", "FALSE", "LIMIT",
+        "ORDER BY", "GROUP BY", "HAVING", "JOIN", "INNER", "LEFT", "RIGHT",
+        "FULL", "OUTER", "ON", "AS", "DISTINCT", "COUNT", "SUM", "AVG", "MIN",
+        "MAX", "CASE", "WHEN", "THEN", "ELSE", "END", "IN", "NOT IN", "BETWEEN",
+        "LIKE", "ILIKE", "IS", "NOT", "EXISTS", "ANY", "ALL", "SOME", "UNION",
+        "INTERSECT", "EXCEPT", "WITH", "RECURSIVE", "PRIMARY KEY", "FOREIGN KEY",
+        "UNIQUE", "CONSTRAINT", "AUTO_INCREMENT", "DEFAULT", "CHECK", "COLUMN",
+        "VARCHAR", "INT", "BIGINT", "TEXT", "DATE", "DATETIME", "TIMESTAMP", "ENUM",
+        "BOOLEAN", "DECIMAL" # Add more SQL keywords as needed
+    ]
+
+    table_names = []
+    start_time = time.time()  # Record start time
+    try:
+        cursor.execute("SHOW TABLES")
+        for table in cursor.fetchall():
+            table_names.append(list(table.values()))
+    except mysql.connector.Error as err:
+        print(f"Error fetching table names: {err}")
+        return  # Exit early if there's an error
+    end_time = time.time()  # Record end time
+    table_fetch_time = end_time - start_time  # Calculate execution time
+    print(f"Fetched tables in ({table_fetch_time:.3f} sec)")
+
+    column_names = []
+    start_time = time.time()  # Record start time
+    for table in table_names:
+        try:
+            cursor.execute(f"DESCRIBE {table}")
+            for column in cursor.fetchall():
+                column_names.append(f"{table}.{column['Field']}") # Add table prefix
+        except mysql.connector.Error as err:
+            print(f"Error fetching columns for table {table}: {err}")
+            continue # Skip to the next table if there's an error
+    end_time = time.time()  # Record end time
+    column_fetch_time = end_time - start_time  # Calculate execution time
+    print(f"Fetched columns in ({column_fetch_time:.3f} sec)")
+
+    start_time = time.time()  # Record start time        
+    keyword_completer = WordCompleter(sql_keywords, ignore_case=True)
+    table_completer = WordCompleter(table_names, ignore_case=True)
+    column_completer = WordCompleter(column_names, ignore_case=True)
+
+    global sql_completer
+    sql_completer = NestedCompleter({
+        '.': column_completer,
+        ' ': NestedCompleter({
+            '': table_completer
+        }),
+        '': keyword_completer
+    })
+    end_time = time.time()  # Record end time
+    completer_time = end_time - start_time  # Calculate execution time
+    print(f"sql_completer in ({completer_time:.3f} sec)")
+
+def update_completer(cursor):
+    """Updates the WordCompleter with SQL keywords and table/column names."""
+
+    sql_keywords = [
+        "SELECT", "FROM", "WHERE", "AND", "OR", "INSERT", "UPDATE", "DELETE",
+        "CREATE", "ALTER", "DROP", "TABLE", "DATABASE", "INDEX", "VIEW",
+        "USE", "SHOW", "DESCRIBE", "EXPLAIN", "GRANT", "REVOKE", "COMMIT",
+        "ROLLBACK", "SAVEPOINT", "SET", "NULL", "TRUE", "FALSE", "LIMIT",
+        "ORDER BY", "GROUP BY", "HAVING", "JOIN", "INNER", "LEFT", "RIGHT",
+        "FULL", "OUTER", "ON", "AS", "DISTINCT", "COUNT", "SUM", "AVG", "MIN",
+        "MAX", "CASE", "WHEN", "THEN", "ELSE", "END", "IN", "NOT IN", "BETWEEN",
+        "LIKE", "ILIKE", "IS", "NOT", "EXISTS", "ANY", "ALL", "SOME", "UNION",
+        "INTERSECT", "EXCEPT", "WITH", "RECURSIVE", "PRIMARY KEY", "FOREIGN KEY",
+        "UNIQUE", "CONSTRAINT", "AUTO_INCREMENT", "DEFAULT", "CHECK", "COLUMN",
+        "VARCHAR", "INT", "BIGINT", "TEXT", "DATE", "DATETIME", "TIMESTAMP", "ENUM",
+        "BOOLEAN", "DECIMAL" # Add more SQL keywords as needed
+    ]
+
+    table_names = []
+    cursor.execute("SHOW TABLES")
+    for table in cursor.fetchall():
+        table_names.append(list(table.values())[0])
+
+    column_names = []
+    for table in table_names:
+        cursor.execute(f"DESCRIBE {table}")
+        for column in cursor.fetchall():
+           column_names.append(f"{table}.{column['Field']}") # Add table prefix
+
+    all_completions = sql_keywords + table_names + column_names
+    sql_completer.words = all_completions  # Update the WordCompleter
+
+
 def launch():
     schema = None
-    conn = None # Initialize conn to None
-    cur = None # Initialize cur to None
+    conn = None
+    cur = None
     model = None
-    chat_history = []  # Initialize chat history outside the loop
-    
+    chat_history = []
+    completer_needs_update = True
+
     # Set up command-line arguments
     parser = argparse.ArgumentParser(description='A Smarter Modern MySQL client')
-    parser.add_argument('--port', help='MySQL port', type=int, default=3306)  # Add port argument
+    parser.add_argument('--port', help='MySQL port', type=int, default=3306)
     parser.add_argument('-u', '--user', help='MySQL username')
     parser.add_argument('-p', '--password', help='MySQL password')
     parser.add_argument('-H', '--host', help='MySQL host')
     parser.add_argument('-d', '--database', help='Default database')
     parser.add_argument('-g', '--gemini_api_key', help='Gemini API key')
     parser.add_argument('-s', '--syntax-highlighting', action='store_true', help='Enable syntax highlighting')
-    parser.add_argument('--no-password', action='store_true', help='Do not use a password even if it is in env variables')  # Add no-password flag
-   
+    parser.add_argument('--no-password', action='store_true', help='Do not use a password even if it is in env variables')
+
     args = parser.parse_args()
 
     # Override environment variables with command-line arguments
@@ -325,122 +417,117 @@ def launch():
     if args.database:
         db_config['database'] = args.database
     if args.port:
-        db_config['port'] = args.port  # Add port to db_config
-    if args.no_password and 'password' in db_config:  # If no-password flag is set, remove password from db_config
-        del db_config['password']        
+        db_config['port'] = args.port
+    if args.no_password and 'password' in db_config:
+        del db_config['password']
     if args.gemini_api_key:
         global gemini_api_key
         gemini_api_key = args.gemini_api_key
-        
-            
+
     try:
         conn = mysql.connector.connect(**db_config)
-        cur = conn.cursor(dictionary=True)  # Use dictionary cursor for easier access
-        conn.autocommit = False  # disable autocommit
+        cur = conn.cursor(dictionary=True)
+        conn.autocommit = False
 
-        history = load_history(history_file)  # Load history
+        history = load_history(history_file)
         sql_accumulator = ""
 
-        infobanner()        
-        
+        infobanner()
+
         while True:
-            # Get the current database name
             current_db = conn.database
 
-            if schema == None or db_config['database'] != current_db:
-                schema=(get_database_schema(cur))
+            if schema is None or db_config['database']!= current_db:
+                schema = get_database_schema(cur)
                 db_config['database'] = current_db
-                 
-            # Update the prompt
+                completer_needs_update = True
+
+            if completer_needs_update:
+                update_completer(cur)
+                completer_needs_update = False
+
             prompt = f"Mysql [{current_db}] SQL> " if current_db else "Mysql SQL> "
 
             try:
-                lexer = PygmentsLexer(MySqlLexer) if args.syntax_highlighting else None # Enable if flag is present
+                lexer = PygmentsLexer(MySqlLexer) if args.syntax_highlighting else None
                 line = session.prompt(prompt, lexer=lexer)
-            except (KeyboardInterrupt, EOFError):  # Catch Ctrl+C and Ctrl+D
+            except (KeyboardInterrupt, EOFError):
                 print("\nExiting...")
                 break
-            
+
             if not line:
                 continue
 
             if line.strip() == "history":
-                # Print the last 100 commands with line numbers
-                for i, cmd in enumerate(history[-100:], start=1):
-                    print(f"{i}. {cmd}")
+                last_100_keys = sorted(history.keys())[-100:]
+                for row_id in last_100_keys:
+                    print(f"{row_id}. {history[row_id]}")
                 continue
 
             if line.startswith("!"):
                 try:
-                    # Extract the command number and execute it
                     cmd_num = int(line[1:])
-                    sql = history[cmd_num - 1]
+                    sql = history[cmd_num]  # Access history using row ID
                     print(f"Executing: {sql}")
                 except (IndexError, ValueError):
                     print("Invalid history command.")
                     continue
             else:
-                # Accumulate SQL and execute as before
                 sql_accumulator += line + "\n"
                 sql = sql_accumulator.strip()
                 sql_accumulator = ""
-                
+
             try:
                 if not conn.is_connected():
                     print("Connection lost. Reconnecting...")
                     conn = reconnect(db_config)
                     cur = conn.cursor(dictionary=True)
+                    completer_needs_update = True
 
                 if sql.startswith("translate") or not sql.lstrip().upper().startswith(validSqlCommands):
-                    print(" [Requesting GenAI help]")
-                    if model == None:
+                    print(" --Requesting GenAI help")
+                    if model is None:
                         model = get_top_flash_model()
                     translate = sql[len("translate"):].strip()
-                    # Pass the chat history to askGemini
                     _sql, chat_history = askGemini(
                         f"Answer with a single line Mysql SQL query to answer the following question '{translate}'. \n",
                         schema,
-                        chat_history,  # Pass the history here.
+                        chat_history,
                         model,
                     )
                     sql = extract_sql_command(_sql)
                     print(f" Running: {sql} ")
-                start_time = time.time()  # Record start time
-                cur.execute(sql)  # Execute SQL
-                end_time = time.time()  # Record end time
-                execution_time = end_time - start_time  # Calculate execution time
+
+                start_time = time.time()
+                cur.execute(sql)
+                end_time = time.time()
+                execution_time = end_time - start_time
 
                 try:
                     results = cur.fetchall()
-                    row_count = len(results)  # Get the number of rows
-                    print_formatted_results(cur, results)  # Print formatted results
-                    print(f"{row_count} rows in set ({execution_time:.3f} sec)")  # Print timing information
+                    row_count = len(results)
+                    print_formatted_results(cur, results)
+                    print(f"{row_count} rows in set ({execution_time:.3f} sec)")
                 except mysql.connector.errors.ProgrammingError:
                     print("Query executed successfully.")
 
-                history.append(sql)
-                conn.commit()  # manual commit.
+                history[len(history) + 1] = sql  # Add command to history with new row ID
+                save_history(history_file)
+                conn.commit()
 
             except mysql.connector.Error as err:
+                print(f"Error: {err}")
                 if err.errno == mysql.connector.errorcode.CR_SERVER_LOST:
-                    conn = reconnect(db_config) # Reconnect
-                    cur = conn.cursor(dictionary=True)  # Reset the cursor
-                    # Retry the query
-                    cur.execute(sql)
+                    conn = reconnect(db_config)
+                    cur = conn.cursor(dictionary=True)
+                    completer_needs_update = True
 
     except mysql.connector.Error as err:
-        if err.errno == mysql.connector.errorcode.CR_SERVER_LOST:
-            conn = reconnect(db_config) # Reconnect
-            cur = conn.cursor(dictionary=True)  # Reset the cursor
-            # Retry the query
-            cur.execute(sql)
-            print(f"Error connecting to MySQL Platform: {e}")
-        else:
-            raise err
+        print(f"Error connecting to MySQL Platform: {err}")
     finally:
         if conn and conn.is_connected():
             conn.close()
-
+            
 def main():
     launch()
 
