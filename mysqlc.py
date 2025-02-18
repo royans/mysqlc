@@ -279,6 +279,7 @@ def launch():
     parser.add_argument('-H', '--host', help='MySQL host')
     parser.add_argument('-d', '--database', help='Default database')
     parser.add_argument('-g', '--gemini_api_key', help='Gemini API key')
+    parser.add_argument('-s', '--syntax-highlighting', action='store_true', help='Enable syntax highlighting')
     parser.add_argument('--no-password', action='store_true', help='Do not use a password even if it is in env variables')  # Add no-password flag
    
     args = parser.parse_args()
@@ -323,7 +324,8 @@ def launch():
             prompt = f"Mysql [{current_db}] SQL> " if current_db else "Mysql SQL> "
 
             try:
-                line = session.prompt(prompt, lexer=PygmentsLexer(MySqlLexer))
+                lexer = PygmentsLexer(MySqlLexer) if args.syntax_highlighting else None # Enable if flag is present
+                line = session.prompt(prompt, lexer=lexer)
             except (KeyboardInterrupt, EOFError):  # Catch Ctrl+C and Ctrl+D
                 print("\nExiting...")
                 break
