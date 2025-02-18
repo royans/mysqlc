@@ -289,7 +289,33 @@ Note: Press "ALT+Enter" to execute command.
 ------------------------------------------------          
 """)
 
+def execute_recent_match(history, partial_command):
+    """
+    Finds and executes the most recent command in history that matches the partial command.
 
+    Args:
+        history: A dictionary containing command history (row_id: command).
+        partial_command: The partial command to search for.
+
+    Returns:
+        True if a matching command was found and executed, False otherwise.
+    """
+    import re
+
+    matching_commands = []
+    for row_id, command in history.items():
+        if re.search(f"^\\s*{partial_command}", command, re.IGNORECASE): # Improved regex for partial match at the beginning of the command
+            matching_commands.append((row_id, command))
+
+    if matching_commands:
+        # Sort by row_id to get the most recent command
+        matching_commands.sort(reverse=True)
+        most_recent_row_id, most_recent_command = matching_commands[0]
+        print(f"Executing: {most_recent_command}")
+        return most_recent_command
+    else:
+        print("No matching command found.")
+        return None
 
 def broken_update_completer(cursor):
     """Updates the WordCompleter with SQL keywords and table/column names."""
@@ -466,10 +492,16 @@ def launch():
 
             if line.startswith("!"):
                 try:
+                    # Try to convert to int first to see if it is a specific command number
                     cmd_num = int(line[1:])
                     sql = history[cmd_num]  # Access history using row ID
                     print(f"Executing: {sql}")
-                except (IndexError, ValueError):
+                except ValueError:
+                    # If it's not an integer, then it's a partial match
+                    sql = execute_recent_match(history, line[1:])
+                    if sql is None:
+                        continue
+                except (IndexError):
                     print("Invalid history command.")
                     continue
             else:
