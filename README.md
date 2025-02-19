@@ -1,4 +1,4 @@
-# mysqlc - Modern MySQL client with a GenAI boost
+# mysqlc - Modern MySQL client with GenAI boost
 
 We all love Mysql/Mariadb, but one thing which we all could benifit from is having a few more features in its barebones command line client. There are commercial options available which are significantly more powerful, but some things should just be free for all.  This tiny project addresses a few of these gaps which I personally dislike.
 
@@ -177,7 +177,7 @@ Mysql [hopot] SQL> list the top 10 request_uri in the last 1 week which had a re
 
 ## Risks/Warnings
 * This is a proof of concept. Don't trust it, but feel free to be inspired
-* The "translate" command world perfectly for simple operations, but may require a few attempts for more complex operations
+* The "translate" command works perfectly for simple operations, but may require a few attempts for more complex operations
   * In a future version, I may introduce retries (which I do with gbash), but not in this current one
 * There is no input validation at all - again the assumption is that its being run by someone fully trusted
 * SQL History record could be a potential source of leak as well - we should assume the system is locked down

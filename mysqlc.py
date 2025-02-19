@@ -2,6 +2,7 @@
 import os
 import mysql.connector
 import time
+import argparse
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
@@ -10,11 +11,17 @@ from prompt_toolkit.filters import Condition
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.lexers import PygmentsLexer
 from pygments.lexers.sql import MySqlLexer
-import argparse
 from prompt_toolkit.completion import NestedCompleter, WordCompleter
 from prompt_toolkit.application import get_app # Import get_app
 
-version = 0.17
+version = 0.18
+
+# History file path
+history_file = os.path.expanduser('~/.mysqlc.history')
+history = {} 
+
+# Setup global configuration
+gemini_api_key = os.environ["GEMINI_API_KEY"]
 
 # Database connection details from environment variables
 db_config = {
@@ -26,22 +33,11 @@ db_config = {
 
 validSqlCommands = ("SELECT", "USE", "SHOW", "DESC","UPDATE", "INSERT", "DELETE", "CREATE", "ALTER", "DROP")
 validGenAISqlCommands = ("SELECT", "USE", "SHOW", "DESC")
-
 GenAICurrentSchema = None
-
-history = {} 
-
-gemini_api_key = os.environ["GEMINI_API_KEY"]
-
-# History file path
-history_file = os.path.expanduser('~/.mysqlc.history')
-
 sql_completer = WordCompleter([], ignore_case=True)
-bindings = KeyBindings()
-
 
     
-    
+bindings = KeyBindings()    
 @bindings.add('tab')
 def _(event: KeyPressEvent):
     "Allow tabs to be inserted as input."
@@ -116,7 +112,8 @@ You are a MySQL query helper who is helping a database admin in their regular jo
    - Example: if the question is "What is the capital of India", you could answer with " SELECT 'New Delhi'; " 
 
 Please see the following schema to understand how to structure the sql to answer the question which follows
-- Note that table names are case sensitive. Do not try to change them.
+- Note that table names are case sensitive. 
+- YOU MUST NOTE CHANGE THE CASE OF THE TABLE or FIELD NAMES.
 - Here is the schema: 
 ---------------
     {schema} 
