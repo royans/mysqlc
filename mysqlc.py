@@ -108,8 +108,8 @@ def askGemini(query, schema, chat_history=None, default_model_name="gemini-2.0-f
         query = f"""
 You are a MySQL query helper who is helping a database admin in their regular job.
 - Please note that the questions the user is asking assumes you will try to understand the context, the history and respond back with single line valid MySQL query which the admin can execute.
-- If the question has nothing to do with the current database, please do answer using a SELECT command: 
-   - Example: if the question is "What is the capital of India", you could answer with " SELECT 'New Delhi'; " 
+- If the question has nothing to do with the current database, please try your best to answer and start the answer with "GenAI Answer:" 
+   - Example: if the question is "What is the capital of India", you could answer with "GenAI Answer: New Delhi" 
 
 Please see the following schema to understand how to structure the sql to answer the question which follows
 - Note that table names are case sensitive. 
@@ -195,8 +195,10 @@ def extract_sql_command(sql_string):
         line = line.strip()
         if line.upper().startswith(validGenAISqlCommands):
             return line
-    print(f"Answer (not executing): {line}")
+    print(f"{line}")
     return None
+
+
 
 def reconnect(conn_params):
     """Attempts to reconnect to the MySQL server."""
@@ -604,7 +606,8 @@ def launch():
                         model,
                     )
                     sql = extract_sql_command(_sql)
-                    print(f" Running: {sql} ")
+                    if sql: # if it is a valid SQL command
+                        print(f" Running: {sql} ")
 
                 start_time = time.time()
                 cur.execute(sql)
