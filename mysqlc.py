@@ -416,6 +416,7 @@ def launch():
     model = None
     chat_history = []
     completer_needs_update = True
+    syntax_highlighting_enabled = False  # Flag for syntax highlighting
 
     # Set up command-line arguments
     parser = argparse.ArgumentParser(description='A Smarter Modern MySQL client')
@@ -447,6 +448,9 @@ def launch():
         global gemini_api_key
         gemini_api_key = args.gemini_api_key
 
+    if args.syntax_highlighting:
+        syntax_highlighting_enabled = True  # Set the flag
+
     try:
         conn = mysql.connector.connect(**db_config)
         cur = conn.cursor(dictionary=True)
@@ -460,19 +464,19 @@ def launch():
         while True:
             current_db = conn.database
 
-            if schema is None or db_config['database']!= current_db:
+            if schema is None or db_config['database'] != current_db:
                 schema = get_database_schema(cur)
                 db_config['database'] = current_db
                 completer_needs_update = True
 
-            if completer_needs_update:
+            if completer_needs_update and syntax_highlighting_enabled:  # Only update if syntax highlighting is on
                 update_completer(cur)
                 completer_needs_update = False
 
             prompt = f"Mysql [{current_db}] SQL> " if current_db else "Mysql SQL> "
 
             try:
-                lexer = PygmentsLexer(MySqlLexer) if args.syntax_highlighting else None
+                lexer = PygmentsLexer(MySqlLexer) if syntax_highlighting_enabled else None  # Use the flag
                 line = session.prompt(prompt, lexer=lexer)
             except (KeyboardInterrupt, EOFError):
                 print("\nExiting...")
@@ -529,6 +533,7 @@ def launch():
 
                 start_time = time.time()
                 cur.execute(sql)
+                rows_affected = cur.rowcount  # This is the key change
                 end_time = time.time()
                 execution_time = end_time - start_time
 
@@ -536,9 +541,12 @@ def launch():
                     results = cur.fetchall()
                     row_count = len(results)
                     print_formatted_results(cur, results)
-                    print(f"{row_count} rows in set ({execution_time:.3f} sec)")
+                    if rows_affected > 0:
+                        print(f"{rows_affected} rows affected ({execution_time:.3f} sec)")
+                    else:
+                        print(f"{row_count} rows returnned ({execution_time:.3f} sec)")
                 except mysql.connector.errors.ProgrammingError:
-                    print("Query executed successfully.")
+                    print(f"Error: {rows_affected} rows affected.")  # Show affected rows
 
                 history[len(history) + 1] = sql  # Add command to history with new row ID
                 save_history(history_file)
@@ -556,7 +564,7 @@ def launch():
     finally:
         if conn and conn.is_connected():
             conn.close()
-            
+                        
 def main():
     launch()
 
