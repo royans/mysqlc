@@ -14,7 +14,7 @@ from pygments.lexers.sql import MySqlLexer
 from prompt_toolkit.completion import NestedCompleter, WordCompleter
 from prompt_toolkit.application import get_app # Import get_app
 
-version = 0.18
+version = 0.19
 
 # History file path
 history_file = os.path.expanduser('~/.mysqlc.history')
@@ -275,17 +275,92 @@ def save_history(history_file):
         print(f"Error saving history: {e}")
 
 
-def infobanner():
+def infobanner(cur):
+    """Displays the info banner with current load/busyness metrics, including some as percentages."""
+
     print(f"""
 ------------------------------------------------          
 mysqlc: A modern MySQL client
 - Version: {version}
 - Source: https://github.com/royans/mysqlc
+""")
 
+    try:
+        # Get MySQL version
+        cur.execute("SELECT VERSION()")
+        mysql_version = cur.fetchone()['VERSION()']
+
+        # Get uptime in seconds
+        cur.execute("SHOW GLOBAL STATUS LIKE 'Uptime'")
+        uptime_seconds = int(cur.fetchone()['Value'])
+
+        # Calculate hours and minutes from uptime
+        uptime_hours = uptime_seconds // 3600
+        uptime_minutes = (uptime_seconds % 3600) // 60
+
+        # Format uptime string
+        uptime_string = f"Uptime: {uptime_hours} hours {uptime_minutes} mins"
+
+        # Get important status variables
+        cur.execute("SHOW GLOBAL STATUS")
+        status_vars = cur.fetchall()
+
+        important_vars = {
+            "Threads_running": None,
+            "Threads_connected": None,
+            "Threads_cached": None,
+            "Connections": None,
+            "Innodb_buffer_pool_read_requests": None,
+            "Innodb_buffer_pool_reads": None,
+            "Innodb_row_lock_current_waits": None,
+            "Created_tmp_disk_tables": None,
+            "Handler_read_rnd_next": None,
+            "Qcache_hits": None,
+            "Select_full_join": None,
+            "Sort_merge_passes": None,
+            "Innodb_log_waits": None,
+            "Questions": None,
+            "Com_select": None
+        }
+
+        # Extract values for the important variables
+        for var in status_vars:
+            if var['Variable_name'] in important_vars:
+                important_vars[var['Variable_name']] = int(var['Value'])
+
+        displayed_vars = []
+
+        # Calculate and display percentage metrics
+        if important_vars["Questions"] and important_vars["Com_select"] and important_vars["Questions"] > 0:
+            select_pct = important_vars["Com_select"] / important_vars["Questions"] * 100
+            displayed_vars.append(f"Com_select: {select_pct:.1f}% of queries")
+
+        if important_vars["Innodb_buffer_pool_read_requests"] and important_vars["Innodb_buffer_pool_reads"] and important_vars["Innodb_buffer_pool_read_requests"] > 0:
+            buffer_pool_hit_pct = 100 - (important_vars["Innodb_buffer_pool_reads"] / important_vars["Innodb_buffer_pool_read_requests"] * 100)
+            displayed_vars.append(f"Innodb_buffer_pool_hit_ratio: {buffer_pool_hit_pct:.1f}%")
+
+        # Display other important metrics
+        for var_name, var_value in important_vars.items():
+            if var_value is not None and var_name not in ("Com_select", "Questions", "Innodb_buffer_pool_read_requests", "Innodb_buffer_pool_reads"):
+                displayed_vars.append(f"{var_name}: {var_value}")
+
+        if displayed_vars:
+            # Include version and uptime in the status line
+            print(f" -- MySQL version {mysql_version}: {uptime_string}")  
+            for var_info in displayed_vars:
+                print(f"    - {var_info}")
+        else:
+            print("    No status info found.")
+
+    except mysql.connector.Error as err:
+        print(f"Error fetching global status: {err}")
+
+    print("""
 Note: Press "ALT+Enter" to execute command.
 ------------------------------------------------          
 """)
-
+    
+    
 def execute_recent_match(history, partial_command):
     """
     Finds and executes the most recent command in history that matches the partial command.
@@ -459,7 +534,7 @@ def launch():
         history = load_history(history_file)
         sql_accumulator = ""
 
-        infobanner()
+        infobanner(cur)
 
         while True:
             current_db = conn.database
