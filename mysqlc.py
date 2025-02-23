@@ -14,7 +14,7 @@ from pygments.lexers.sql import MySqlLexer
 from prompt_toolkit.completion import NestedCompleter, WordCompleter
 from prompt_toolkit.application import get_app # Import get_app
 
-version = 0.19
+version = 0.20
 
 # History file path
 history_file = os.path.expanduser('~/.mysqlc.history')
